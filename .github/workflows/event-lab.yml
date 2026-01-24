@@ -14,16 +14,20 @@ on:
         description: 'Why are you running this manually?'
         required: true
         default: 'Testing'
+permissions:
+  contents: write
 jobs:
   detect-event:
     runs-on: ubuntu-latest
+    outputs:
+      version_tag: ${{ steps.generate_id.outputs.new_tag }}
     steps:
-      - name: Report Event Type
+      - name: Generate unique ID
+        id: generate_id 
         run: |
-          echo "This workflow was triggered by: ${{ github.event_name }}"
-          echo "The action performed was: ${{ github.action }}"
-      - name: Dump full event data
-        run: echo "${{ toJson(github.event) }}"
+          TAG="v$(date +'%Y%m%d-%H%M%S')"
+          echo "new_tag=$TAG" >> $GITHUB_OUTPUT
+          echo "Generated Tag: $TAG"
   backend-deployment:
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
@@ -42,4 +46,18 @@ jobs:
     steps:
       - name: Manual Job
         run: echo "Manual Job"
+  create-release:
+    needs: [detect-event]
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Received Tag
+        run: echo "The tag received from detect-event is ${{ needs.detect-event.outputs.version_tag }}"
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ needs.detect-event.outputs.version_tag }}
+          name: Release ${{ needs.detect-event.outputs.version_tag }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
