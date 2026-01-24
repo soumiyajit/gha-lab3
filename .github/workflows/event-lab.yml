@@ -1,0 +1,45 @@
+name: Event Understanding Lab
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'backend/**'
+  pull_request:
+    types: [opened, reopened]
+  schedule:
+    - cron: '0 * * * *'
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Why are you running this manually?'
+        required: true
+        default: 'Testing'
+jobs:
+  detect-event:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report Event Type
+        run: |
+          echo "This workflow was triggered by: ${{ github.event_name }}"
+          echo "The action performed was: ${{ github.action }}"
+      - name: Dump full event data
+        run: echo "${{ toJson(github.event) }}"
+  backend-deployment:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Push Job
+        run: echo "Deploying backend from push event."
+  pr-review-check:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: PR Job
+        run: echo "Reviewing code from pull request."
+  manual-maintenance:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Manual Job
+        run: echo "Manual Job"
+
